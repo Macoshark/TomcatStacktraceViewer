@@ -81,7 +81,7 @@ class StacktraceHash
 
     check_and_add_current_stacktrace.call
 
-    @stacktraces = @stacktraces.sort.to_h
+    @stacktraces = Hash[@stacktraces.sort]
 
     init_menu
   end
