@@ -81,6 +81,11 @@ class StacktraceHash
 
     check_and_add_current_stacktrace.call
 
+    if (@stacktraces.size == 0)
+      puts "No exceptions found from the log file. Exiting."
+      exit 0
+    end
+
     @stacktraces = Hash[@stacktraces.sort]
 
     init_menu
