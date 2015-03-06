@@ -58,7 +58,12 @@ class StacktraceHash
       line.gsub!(/\r\n?/, "\n")
 
       if (stacktrace_begins)
-        exception = line.match(/(^.+?)\:/i).captures[0]
+        regex_match = line.match(/(^.+?)\:/i)
+        if (!regex_match)
+          next
+        end
+
+        exception = regex_match.captures[0]
 
         if (!@stacktraces[exception])
             @stacktraces[exception] = Array.new
