@@ -12,9 +12,9 @@ def main
     abort "Specify a stacktrace file"
   end
 
-  stacktraces = StacktraceHash.new(ARGV.first)
+  stacktraceHash = StacktraceHash.new(ARGV.first)
 
-  stacktraces.menu.show_and_handle_input
+  stacktraceHash.menu.show_and_handle_input
 end
 
 # -----------------------------------------------------------------------------
@@ -26,13 +26,32 @@ class StacktraceHash
 
   # Reads stacktraces from the provided file and returns a hash map
   def initialize(filename)
+    files = Array.new
+
+    if (File.directory?(filename))
+      Dir.entries(filename).select {|f| !File.directory? f}.each do |file|
+        files << file.to_s
+      end
+    elsif (File.file?(filename))
+      files << filename
+    else
+      files = Dir.glob(filename)
+    end
+
+    @stacktraces = Hash.new
+
+    files.each do |file|
+      read_file(file)
+    end
+  end
+
+  def read_file(filename)
     begin
       file = File.open(filename)
     rescue Exception => e
       abort "Failed to open file #{filename}! Error: " + e.message
     end
 
-    @stacktraces = Hash.new
     stacktrace_begins = false
     current_stacktrace = nil
     line_num = 0
@@ -70,7 +89,7 @@ class StacktraceHash
             @stacktraces[exception] = Array.new
         end
 
-        current_stacktrace = Stacktrace.new line_num, exception, line
+        current_stacktrace = Stacktrace.new line_num, exception, line, filename
       elsif (current_stacktrace != nil && !current_stacktrace.is_full)
         current_stacktrace.add_line(line)
       end
@@ -116,11 +135,12 @@ end
 # -----------------------------------------------------------------------------
 
 class Stacktrace
-  attr_reader :line_num, :exception, :messages, :traces, :end_line_num
+  attr_reader :line_num, :exception, :messages, :traces, :end_line_num, :filename
   attr_writer :end_line_num
 
-  def initialize(line_num, exception, first_line)
+  def initialize(line_num, exception, first_line, filename)
     @line_num = line_num
+    @filename = filename
     @end_line_num = -1
     @exception = exception
     @messages = Array.new
@@ -294,7 +314,7 @@ class ShowTracesCommand < Command
       menu.show_and_handle_input
     else
       stacktrace = @stacktrace_array.first
-      ShowSingleTraceCommand.open_trace_in_viewer stacktrace.line_num
+      ShowSingleTraceCommand.open_trace_in_viewer stacktrace.line_num, stacktrace.filename
     end
   end
 end
@@ -310,11 +330,11 @@ class ShowSingleTraceCommand < Command
   end
 
   def execute
-    ShowSingleTraceCommand.open_trace_in_viewer @stacktrace.line_num
+    ShowSingleTraceCommand.open_trace_in_viewer @stacktrace.line_num, @stacktrace.filename
   end
 
-  def self.open_trace_in_viewer(line_num)
-    system "less -N +#{line_num}g #{ARGV.first}"
+  def self.open_trace_in_viewer(line_num, filename)
+    system "less -N +#{line_num}g #{filename}"
   end
 end
 
